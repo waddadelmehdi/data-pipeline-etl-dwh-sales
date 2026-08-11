@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Base source : ERP
+  postgres_source:
+    image: postgres:15
+    container_name: postgres_source
+    environment:
+      POSTGRES_DB: ${POSTGRES_SOURCE_DB}
+      POSTGRES_USER: ${POSTGRES_SOURCE_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_SOURCE_PASSWORD}
+    ports:
+      - "${POSTGRES_SOURCE_PORT}:5432"
+    volumes:
+      - source_data:/var/lib/postgresql/data
+
+  # Data Warehouse Local
+  postgres_dwh:
+    image: postgres:15
+    container_name: postgres_dwh
+    environment:
+      POSTGRES_DB: ${POSTGRES_DWH_DB}
+      POSTGRES_USER: ${POSTGRES_DWH_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DWH_PASSWORD}
+    ports:
+      - "${POSTGRES_DWH_PORT}:5432"
+    volumes:
+      - dwh_data:/var/lib/postgresql/data
+
+  # Ingestion & Orchestration : Mage.ai
+  mage:
+    image: mageai/mageai:latest
+    container_name: mage_orchestrator
+    command: mage start ${MAGE_PROJECT_NAME}
+    ports:
+      - "${MAGE_PORT}:6789"
+    volumes:
+      - ./mage_data:/home/src
+    environment:
+      USER_CODE_PATH: /home/src/${MAGE_PROJECT_NAME}
+
+  # Business Intelligence : Metabase
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase_app
+    ports:
+      - "${METABASE_PORT}:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ${POSTGRES_DWH_DB}
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_DWH_USER}
+      MB_DB_PASS: ${POSTGRES_DWH_PASSWORD}
+      MB_DB_HOST: postgres_dwh
+    depends_on:
+      - postgres_dwh
+
+volumes:
+  source_data:
+  dwh_data:

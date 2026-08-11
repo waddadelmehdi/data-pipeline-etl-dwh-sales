@@ -1,0 +1,5 @@
+# Exclure le fichier contenant les secrets réels
+.env
+
+# Exclure les données volumineuses ou temporaires si nécessaire
+mage_data/
